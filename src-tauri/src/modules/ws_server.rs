@@ -36,18 +36,24 @@ impl WsServer {
 
         let mut ws_task = self.ws_task.lock().await;
 
-        let self_clone = self.clone();
+        match TcpListener::bind(format!("127.0.0.1:{}", self.port)).await {
+            Ok(listener) => {
+                let self_clone = self.clone();
 
-        *ws_task = Some(tokio::spawn(async move {
-            let listener = TcpListener::bind(format!("127.0.0.1:{}", self_clone.port)).await.expect("绑定本地端口失败");
+                *ws_task = Some(tokio::spawn(async move {
+                    while let Ok((stream, addr)) = listener.accept().await {
+                        self_clone.handle_connection(stream, addr).await;
+                    }
+                }));
 
-            while let Ok((stream, addr)) = listener.accept().await {
-                self_clone.handle_connection(stream, addr).await;
+                logger::success(&format!("websocket服务启动成功, 使用端口: {}", self.port), MODULE);
+                Ok(())
+            },
+            Err(e) => {
+                logger::error(&format!("绑定本地端口失败, {}", e), MODULE);
+                Err(format!("绑定本地端口失败, {}", e))
             }
-        }));
-
-        logger::success(&format!("websocket服务启动成功, 使用端口: {}", self.port), MODULE);
-        Ok(())
+        }
     }
 
     pub async fn stop(&mut self) {  
