@@ -13,14 +13,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - platform: 'aarch64-macos-latest'
+          - platform: 'macos-latest'
             args: '--target aarch64-apple-darwin'
-          - platform: 'x86_64-macos-latest'
+          - platform: 'macos-latest'
             args: '--target x86_64-apple-darwin'
-          - platform: 'x86_64-windows-latest'
+          - platform: 'windows-latest'
             args: '--target x86_64-pc-windows-msvc'
-          - platform: 'aarch64-windows-latest'
-            args: '--target aarch64-pc-windows-msvc'
 
     runs-on: ${{ matrix.platform }}
 
