@@ -1,18 +1,32 @@
 import { useState } from 'react'
 import { App, Flex, Input, Select, Button, Tag } from 'antd'
 import { invoke } from '@tauri-apps/api/core'
+import { listen } from '@tauri-apps/api/event'
 
-const portList = [
+const defaultPortList = [
   "COM1", "COM2"
 ]
 
 const SerialPage = () => {
+  const [portList, setPortList] = useState(defaultPortList)
   const [port, setPort] = useState('COM1')
   const [baudRate, setBaudRate] = useState(9600)
   const [status, setStatus] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [weight, setWeight] = useState("0.000")
 
   const { message } = App.useApp()
+
+  const refreshPortList = async () => {
+    try {
+      const result = await invoke('read_serial_port')
+      setPortList(result)
+      setPort('')
+    } catch (error) {
+      console.log(error)
+      message.error(typeof(error) == 'string' ? error : error.message || '未知错误')
+    }
+  }
 
   const startSerialServer = async () => {
     setLoading(true)
@@ -58,12 +72,19 @@ const SerialPage = () => {
     }
   }
 
+  listen('serial_data', (event) => {
+    const receivedData = event.payload
+    console.log('接收到数据', receivedData)
+    setWeight(receivedData)
+  })
+
   return (
     <>
       <Flex gap={ '10px' }>
         <Select
           style={{ width: '160px' }}
           value={ port }
+          disabled={ status }
           options={portList.map(port => ({
             label: port,
             value: port,
@@ -82,8 +103,10 @@ const SerialPage = () => {
           color={ status ? 'danger' : 'primary' }
           onClick={ status ? stopSerialServer : startSerialServer }
         >{ status ? '关闭' : '启动' }</Button>
+        <Button onClick={ refreshPortList }>刷新串口队列</Button>
       </Flex>
       <p>状态: <Tag color={ status ? 'success' : 'error' }>{ status ? '已连接' : '未连接' }</Tag></p>
+      <p>当前读数: { weight }</p>
     </>
   )
 }
